@@ -1,0 +1,5 @@
+{
+  "name": "Merchant AI Order Entry",
+  "description": "An AI-powered order management tool for Facebook Messenger merchants. Paste chat logs, and the AI automatically extracts name, address, phone, and price for quick entry.",
+  "requestFramePermissions": []
+}
