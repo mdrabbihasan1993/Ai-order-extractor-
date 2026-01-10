@@ -3,7 +3,8 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { OrderDetails } from "../types";
 
 export const extractOrderDetails = async (chatText: string): Promise<OrderDetails> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  // Fixed: Always use process.env.API_KEY directly as per SDK guidelines
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
@@ -17,24 +18,24 @@ export const extractOrderDetails = async (chatText: string): Promise<OrderDetail
       systemInstruction: `You are an expert order processing assistant for e-commerce merchants. 
       Your goal is to accurately extract Customer Name, Phone Number, Delivery Address, and Total Price from chat transcripts. 
       
-      CRITICAL RULES:
-      1. DO NOT GUESS OR HALLUCINATE. If a field is not explicitly mentioned in the text, you MUST return null for that field.
-      2. NEVER provide a default price (like 65 or 0) if no price is mentioned. If there is no mention of money/taka/tk/price, set totalPrice to null.
-      3. Do not assume information from context that isn't clearly stated as a fact.
-      4. If a piece of information is missing (e.g., no price mentioned), just leave it as null. 
-      5. Use the 'note' field for any special requests, delivery instructions, or additional details actually present in the text.
-      6. Clean phone numbers of any formatting.
-      7. Ensure prices are returned as numbers.`,
+      STRICT NEGATIVE CONSTRAINTS (IMPORTANT):
+      1. PRICE HALLUCINATION: If there is no explicit price mentioned (e.g., "500tk", "Price is 200", "Total 1000", "bill 50"), you MUST return null for "totalPrice".
+      2. DO NOT assume numbers in addresses (like "24/1" or "House 5") or phone numbers (like "019...") are prices. If you only see address numbers and phone numbers, set totalPrice to null.
+      3. NEVER use default values like 65, 0, or any other number if no financial value is clearly stated.
+      4. CUSTOMER NAME: If you cannot find a clear name, return null.
+      5. PHONE: Extract the phone number if present, otherwise return null.
+      
+      Output MUST be valid JSON with fields: customerName, phoneNumber, deliveryAddress, totalPrice, items, note.`,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
         properties: {
-          customerName: { type: Type.STRING, description: "Full name if present, else null" },
-          phoneNumber: { type: Type.STRING, description: "Phone number if present, else null" },
-          deliveryAddress: { type: Type.STRING, description: "Full address if present, else null" },
-          totalPrice: { type: Type.NUMBER, description: "Numeric value of the price if present, else null" },
-          items: { type: Type.STRING, description: "Items mentioned if any, else null" },
-          note: { type: Type.STRING, description: "Extra notes or instructions if present, else null" }
+          customerName: { type: Type.STRING, description: "Extracted name or null" },
+          phoneNumber: { type: Type.STRING, description: "Extracted phone or null" },
+          deliveryAddress: { type: Type.STRING, description: "Extracted address or null" },
+          totalPrice: { type: Type.NUMBER, description: "Numeric total price. MUST BE null if not found." },
+          items: { type: Type.STRING, description: "Items or null" },
+          note: { type: Type.STRING, description: "Notes or null" }
         },
         required: ["customerName", "phoneNumber", "deliveryAddress", "totalPrice", "note"]
       }
@@ -42,7 +43,8 @@ export const extractOrderDetails = async (chatText: string): Promise<OrderDetail
   });
 
   try {
-    const data = JSON.parse(response.text || '{}');
+    const text = response.text || '{}';
+    const data = JSON.parse(text);
     return data;
   } catch (err) {
     console.error("Failed to parse AI response", err);

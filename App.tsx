@@ -87,16 +87,6 @@ const App: React.FC = () => {
           </div>
           <span className="text-xl font-bold tracking-tight text-brand-blue">AI Order Extractor</span>
         </div>
-        <button 
-          onClick={() => {
-            setCurrentOrder({ customerName: '', phoneNumber: '', deliveryAddress: '', totalPrice: 0, items: '', note: '' });
-            setIsModalOpen(true);
-          }}
-          className="text-sm font-semibold text-slate-600 hover:text-brand-orange transition-colors flex items-center gap-1.5"
-        >
-          <Plus className="w-4 h-4" />
-          Manual Entry
-        </button>
       </header>
 
       <main className="max-w-3xl mx-auto px-6 pb-20 space-y-12">
